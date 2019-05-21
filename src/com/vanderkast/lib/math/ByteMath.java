@@ -2,6 +2,7 @@ package com.vanderkast.lib.math;
 
 import com.vanderkast.lib.VectorExtension;
 import com.vanderkast.lib.logic.ByteLogic;
+import com.vanderkast.lib.logic.Logic;
 import com.vanderkast.lib.number.ByteUnlimitedNumber;
 import com.vanderkast.lib.number.UnlimitedNumber;
 
@@ -12,16 +13,16 @@ import java.util.List;
 public class ByteMath implements Math {
     @Override
     public UnlimitedNumber sum(UnlimitedNumber left, UnlimitedNumber right) {
-        boolean leftAbsGreater = new ByteLogic().absGreater(left.vector(), right.vector());
+        boolean leftAbsGreater = new ByteLogic().absGreater(left.reversedVector(), right.reversedVector());
 
         if (left.positive() && right.positive()) {
-            return sumSignPositive(leftAbsGreater, left.vector(), right.vector());
+            return sumSignPositive(leftAbsGreater, left.reversedVector(), right.reversedVector());
         }
 
         if (left.positive() ^ right.positive())
             return sumSignXOR(leftAbsGreater, left, right);
 
-        return sumSignNegative(leftAbsGreater, left.vector(), right.vector());
+        return sumSignNegative(leftAbsGreater, left.reversedVector(), right.reversedVector());
     }
 
     private UnlimitedNumber sumSignPositive(boolean leftAbsGreater, List<Byte> left, List<Byte> right) {
@@ -32,9 +33,9 @@ public class ByteMath implements Math {
 
     private UnlimitedNumber sumSignXOR(boolean leftAbsGreater, UnlimitedNumber left, UnlimitedNumber right) {
         if (leftAbsGreater)
-            return new ByteUnlimitedNumber(byteDif(left.vector(), right.vector()), left.positive(), true);
+            return new ByteUnlimitedNumber(byteDif(left.reversedVector(), right.reversedVector()), left.positive(), true);
 
-        return new ByteUnlimitedNumber(byteDif(right.vector(), left.vector()), right.positive(), true);
+        return new ByteUnlimitedNumber(byteDif(right.reversedVector(), left.reversedVector()), right.positive(), true);
     }
 
     private UnlimitedNumber sumSignNegative(boolean leftAbsGreater, List<Byte> left, List<Byte> right) {
@@ -46,15 +47,15 @@ public class ByteMath implements Math {
 
     @Override
     public UnlimitedNumber difference(UnlimitedNumber left, UnlimitedNumber right) {
-        boolean leftAbsGreater = new ByteLogic().absGreater(left.vector(), right.vector());
+        boolean leftAbsGreater = new ByteLogic().absGreater(left.reversedVector(), right.reversedVector());
 
         if (left.positive() && right.positive())
-            return difSignPositive(leftAbsGreater, left.vector(), right.vector());
+            return difSignPositive(leftAbsGreater, left.reversedVector(), right.reversedVector());
 
         if (left.positive() ^ right.positive())
             return difSignXOR(leftAbsGreater, left, right);
 
-        return difSignNegative(leftAbsGreater, left.vector(), right.vector());
+        return difSignNegative(leftAbsGreater, left.reversedVector(), right.reversedVector());
     }
 
     private UnlimitedNumber difSignPositive(boolean leftAbsGreater, List<Byte> left, List<Byte> right) {
@@ -65,8 +66,8 @@ public class ByteMath implements Math {
 
     private UnlimitedNumber difSignXOR(boolean leftAbsGreater, UnlimitedNumber left, UnlimitedNumber right) {
         if (left.positive())
-            return difSignXORLeftPositive(leftAbsGreater, left.vector(), right.vector());
-        return difSignXORLeftNegative(leftAbsGreater, left.vector(), right.vector());
+            return difSignXORLeftPositive(leftAbsGreater, left.reversedVector(), right.reversedVector());
+        return difSignXORLeftNegative(leftAbsGreater, left.reversedVector(), right.reversedVector());
     }
 
     private UnlimitedNumber difSignXORLeftPositive(boolean leftAbsGreater, List<Byte> left, List<Byte> right) {
@@ -133,14 +134,21 @@ public class ByteMath implements Math {
 
     @Override
     public UnlimitedNumber composition(UnlimitedNumber left, UnlimitedNumber right) {
+        if(isZero(left) || isZero(right))
+            return new ByteUnlimitedNumber("0");
+
         int additionalZeros = 0;
-        while (right.vector().get(additionalZeros) == 0) additionalZeros++;
+        while (right.reversedVector().size() > additionalZeros && right.reversedVector().get(additionalZeros) == 0) additionalZeros++;
 
         boolean resultPositive = left.positive() == right.positive();
 
-        List<Byte> result = sumOfScales(copyWithShift(left.vector(), additionalZeros), right.vector());
+        List<Byte> result = sumOfScales(copyWithShift(left.reversedVector(), additionalZeros), right.reversedVector());
 
         return new ByteUnlimitedNumber(VectorExtension.reversed(result), resultPositive);
+    }
+
+    private boolean isZero(UnlimitedNumber number){
+        return number.vector().size() == 1 && number.vector().get(0) == 0;
     }
 
     private List<Byte> copyWithShift(List<Byte> vector, int zeros) {
@@ -154,7 +162,9 @@ public class ByteMath implements Math {
         List<Byte> box, result = new ArrayList<>();
         for (int i = 0; i < right.size(); i++) {
             box = scaleAndShift(mirror, right.get(i), i);
+
             if (box.size() == 1 && box.get(0) == 0) continue;
+
             result = Arrays.asList(byteSum(box, result));
         }
         return result;
@@ -193,11 +203,58 @@ public class ByteMath implements Math {
 
     @Override
     public UnlimitedNumber division(UnlimitedNumber left, UnlimitedNumber right) {
-        return null;
+        if(isZero(left))
+            return new ByteUnlimitedNumber("0");
+        if(isZero(right))
+            throw new IllegalArgumentException("Dividing by zero is illegal.");
+
+        ByteLogic logic = new ByteLogic();
+        if (logic.absGreater(right.reversedVector(), left.reversedVector()))
+            return new ByteUnlimitedNumber("0");
+
+        if(logic.equal(right, left))
+            return new ByteUnlimitedNumber("1");
+
+        boolean resultPositive = left.positive() == right.positive();
+
+        return new ByteUnlimitedNumber(
+                (calculateDivision(absolute(right), absolute(right), absolute(left)).vector()),
+                resultPositive, true);
+    }
+
+    private UnlimitedNumber calculateDivision(UnlimitedNumber counter, UnlimitedNumber divider, UnlimitedNumber limit) {
+        UnlimitedNumber step = new ByteUnlimitedNumber("0");
+        UnlimitedNumber one = new ByteUnlimitedNumber("1");
+
+        Logic logic = new ByteLogic();
+        while (logic.lowerOrEqual(counter, limit)) {
+            counter = sum(counter, divider);
+            step = sum(step, one);
+        }
+        return step;
     }
 
     @Override
     public UnlimitedNumber modular(UnlimitedNumber left, UnlimitedNumber right) {
-        return null;
+        Logic logic = new ByteLogic();
+        UnlimitedNumber absRight = absolute(right);
+        UnlimitedNumber absLeft = absolute(left);
+        if(logic.lower(absLeft, absRight))
+            return left;
+        if(logic.equal(absLeft, absRight))
+            return new ByteUnlimitedNumber("0");
+        if(isZero(right))
+            throw new IllegalArgumentException("Dividing by zero is illegal.");
+
+        UnlimitedNumber box = absolute(right);
+        while(logic.lower(box, absLeft)){
+            box = sum(box, absRight);
+        }
+        return new ByteUnlimitedNumber(difference(absLeft, difference(box, absRight)).vector(), left.positive());
+    }
+
+    @Override
+    public UnlimitedNumber absolute(UnlimitedNumber number) {
+        return new ByteUnlimitedNumber(number.reversedVector(), true, true);
     }
 }

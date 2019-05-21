@@ -1,8 +1,11 @@
 package com.vanderkast.lib.number;
 
+import com.vanderkast.lib.VectorExtension;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Vector;
 
 import static java.lang.Math.abs;
 
@@ -15,14 +18,21 @@ public class ByteUnlimitedNumber implements UnlimitedNumber {
 
         isPositive = number.charAt(0) != '-';
 
-        int iLast = isPositive ? 0 : 1;
-        while (iLast < number.length() && number.charAt(iLast) == '0') iLast++;
-
-        for (int i = number.length() - 1; i >= iLast; i--) {
-            digits.add(new Byte(String.valueOf(number.charAt(i))));
-        }
+        fillDigitsFromNumber(number, ignoringLength(number, isPositive ? 0 : 1));
 
         setSign(isPositive);
+    }
+
+    private void fillDigitsFromNumber(String number, int toCharPos){
+        for (int i = number.length() - 1; i >= toCharPos; i--) {
+            digits.add(new Byte(String.valueOf(number.charAt(i))));
+        }
+    }
+
+    private int ignoringLength(String number, int from){
+        int ignoringPos = from;
+        while ((ignoringPos < number.length() - 1) && number.charAt(ignoringPos) == '0') ignoringPos++;
+        return  ignoringPos;
     }
 
     public ByteUnlimitedNumber(Byte[] vector, boolean positive, boolean unsafe) {
@@ -46,11 +56,12 @@ public class ByteUnlimitedNumber implements UnlimitedNumber {
 
     public ByteUnlimitedNumber(Byte[] vector) {
         fillDigitsSafely(vector);
+        setSign(true);
     }
 
     public ByteUnlimitedNumber(Byte[] vector, boolean positive) {
         fillDigitsSafely(vector);
-        this.isPositive = positive;
+        setSign(positive);
     }
 
     private void fillDigits(List<Byte> vector, boolean unsafe) {
@@ -103,8 +114,13 @@ public class ByteUnlimitedNumber implements UnlimitedNumber {
     }
 
     @Override
-    public List<Byte> vector() {
+    public List<Byte> reversedVector() {
         return digits;
+    }
+
+    @Override
+    public List<Byte> vector() {
+        return VectorExtension.reversed(digits);
     }
 
     @Override

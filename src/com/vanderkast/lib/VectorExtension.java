@@ -61,4 +61,13 @@ public class VectorExtension {
     public static List<Byte> trimmedAndReversed(List<Byte> vector) {
         return reversed(trimmed(vector));
     }
+
+    public static List<Byte> fromInteger(int number){
+        List<Byte> result = new ArrayList<>();
+        while (number > 1){
+            result.add((byte) (number % 10));
+            number /= 10;
+        }
+        return result;
+    }
 }

@@ -9,18 +9,20 @@ public class ByteLogic implements Logic {
     public boolean greater(UnlimitedNumber left, UnlimitedNumber right) {
         if (left.positive() ^ right.positive())
             return left.positive();
-        if(left.vector().size() != right.vector().size())
-            return left.vector().size() > right.vector().size() == left.positive();
-        return absGreater(left.vector(), right.vector());
+        if(left.reversedVector().size() != right.reversedVector().size())
+            return left.reversedVector().size() > right.reversedVector().size() == left.positive();
+        return absGreater(left.reversedVector(), right.reversedVector());
     }
 
     @Override
     public boolean lower(UnlimitedNumber left, UnlimitedNumber right) {
         if (left.positive() ^ right.positive())
             return right.positive();
-        if(left.vector().size() != right.vector().size())
-            return left.vector().size() > right.vector().size() != left.positive();
-        return !absGreater(left.vector(), right.vector());
+        if(left.reversedVector().size() != right.reversedVector().size())
+            return left.reversedVector().size() > right.reversedVector().size() != left.positive();
+        if(equal(left, right))
+            return false;
+        return !absGreater(left.reversedVector(), right.reversedVector());
     }
 
     public boolean absGreater(List<Byte> a, List<Byte> b) {
@@ -38,10 +40,10 @@ public class ByteLogic implements Logic {
     public boolean equal(UnlimitedNumber left, UnlimitedNumber right) {
         if (left.positive() ^ right.positive())
             return false;
-        if (left.vector().size() != right.vector().size())
+        if (left.reversedVector().size() != right.reversedVector().size())
             return false;
 
-        return differenceOn(left.vector(), right.vector()) == -1;
+        return differenceOn(left.reversedVector(), right.reversedVector()) == -1;
     }
 
     private int differenceOn(List<Byte> a, List<Byte> b) {

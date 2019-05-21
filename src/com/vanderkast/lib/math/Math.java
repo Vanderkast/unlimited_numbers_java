@@ -12,4 +12,6 @@ public interface Math {
     UnlimitedNumber division(UnlimitedNumber left, UnlimitedNumber right);
 
     UnlimitedNumber modular(UnlimitedNumber left, UnlimitedNumber right);
+
+    UnlimitedNumber absolute(UnlimitedNumber number);
 }
